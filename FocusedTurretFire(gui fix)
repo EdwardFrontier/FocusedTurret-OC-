@@ -1,0 +1,142 @@
+local component = require("component")
+local event = require("event")
+local computer = require("computer")
+local term = require("term")
+
+--[turret database]
+--[turret address and data]
+local tX = {}
+local tY = {}
+local tZ = {}
+local tAddress = {}
+local tData = {tAddress, tX, tY, tZ}
+
+--[detecting all conected turret]
+function detectTurret()
+    turret = component.list("turret_base")
+end
+
+--[inserting turret address into turretData table]
+function turretAddress()
+    for address, key in pairs(turret) do 
+        table.insert(tAddress, address)
+    end
+end
+
+--[inserting turret relative coordinate into turretData table]
+function turretCoord()
+    for i = 1, #tAddress do 
+        print("insert turret X coordinate for address", tAddress[i])
+        tX[i] = io.read()
+        print("insert turret Y coordinate for address", tAddress[i])
+        tY[i] = io.read()
+        print("insert turret Z coordinate for address", tAddress[i])
+        tZ[i] = io.read()
+    end
+end
+--[turret database]
+
+--[targeting system]
+--[turret target coordinate]
+targetX = 0
+targetY = 0
+targetZ = 0
+
+lockX = {}
+lockY = {}
+lockZ = {}
+
+pitch ={}
+yaw = {}
+
+
+--[detecting pressed key/button]
+function detectKey()
+    action, keyboardAdress, alphabetPress, keyPress, userName = event.pull()
+    print(keyPress)  
+end
+
+--[moving targeted block]
+function target()
+    if (keyPress == 17 and action == "key_up") then
+        targetX = targetX + 1
+    end
+    if (keyPress == 31 and action == "key_up") then
+        targetX = targetX - 1
+    end
+    if (keyPress == 30 and action == "key_up") then
+        targetZ = targetZ - 1
+    end
+    if (keyPress == 32 and action == "key_up") then
+        targetZ = targetZ + 1
+    end
+    if (keyPress == 200 and action == "key_up") then
+        targetY = targetY + 1
+    end
+    if (keyPress == 208 and action == "key_up") then
+        targetY = targetY - 1
+    end
+end
+
+--[firing all turret to target]
+function fire()
+    if (keyPress == 57 and action == "key_up") then
+        for fire = 1, #tAddress do
+            component.proxy(component.get(tAddress[fire])).forceShootAll()
+        end
+    end 
+end
+
+--[calculating distance from turret location to target location in X Y Z coord system]
+function targetLock()
+    for lock = 1, #tAddress do
+        lockX[lock] = targetX - tX[lock]
+        lockY[lock] = targetY - tY[lock]
+        lockZ[lock] = targetZ - tZ[lock]
+    end
+end
+
+--[calculating turret pitch]
+function pitchMath()
+    for pMath = 1, #tAddress do
+        pitch[pMath] = math.deg(-math.atan2(lockY[pMath], math.sqrt(lockX[pMath] * lockX[pMath] + lockZ[pMath] * lockZ[pMath])))
+    end
+end
+
+--[calculating turret yaw]
+function yawMath()
+    for yMath = 1, #tAddress do
+        yaw[yMath] = math.deg(math.atan2(-lockX[yMath], lockZ[yMath]))
+    end
+end
+
+--[inserting yaw and pitch value]
+function rotation()
+    for degree = 1, #tAddress do
+        component.proxy(component.get(tAddress[degree])).setAllYawPitch(pitch[degree], yaw[degree])
+    end
+end
+--[targeting system]
+detectTurret()
+turretAddress()
+turretCoord()
+print(tX[1])
+while true do
+    detectKey()
+    target()
+    targetLock()
+    pitchMath()
+    yawMath()
+    rotation()
+    fire()
+    term.clear()
+    print(targetX, targetY, targetZ)
+    for i = 1, #tAddress do
+        print("Turret", i, "Pitch:", pitch[i], "Yaw:", yaw[i])
+    end
+end
+
+
+
+
+
